@@ -38,3 +38,18 @@ Based on the what I've discovered whilst prototyping:
  
 ## Generating the code.
 I used ChatGPT to generate the code. The prompt & subsequent chat dialog can be seen here. [ChatGPT: Temp controlled fan](https://chatgpt.com/share/67d2d8a2-fc4c-8001-b3f6-e2f3b498e3e5)
+
+After ChatGPT had created the initial code I went back to the char and asked it to generate algorithms that set fan speed update interval based on the temperaure. The idea being that when the temerature is close to ambient then the update interval does not need to be that often .... but does increase when the temperature is perhaps above optimal.
+
+ChatGPT went on to suggest some other cool things:
+* Lovelace dashboard cards to control everything visually
+* Then showed me how to make these cards "conditional" - for example, hide unused sliders when a different model is selected.
+* A toggle to enable/disable adaptive control
+* Logging suggestions to track which model is active and how it performs
+* A graph card to visualize interval & fan speed trends over time - with color-coding & advanced graph customization
+* Then showed me how to install mini-graph-card and create sleek sparkline graphs with shaded thresholds
+* Then a "model performance comparison" card that logs/visualizes which model was active over time
+
+Here's the chat history for that [ChatGPT: add adaptive update algorithms plus some other cool things](https://chatgpt.com/g/g-HaRByhtTl-home-assistant-assistant/c/67d7064d-9ef4-8001-b204-753f9bf6a477)
+
+
