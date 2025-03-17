@@ -1,19 +1,32 @@
 esphome:
-  name: victron_fan_controller
-  platform: ESP8266
+  name: fan-victron-orion-dc-charger
+  friendly_name: Cooling Fan for Victron Orion DC Charger
+
+esp8266:
   board: d1_mini
 
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "pD5POkoUsLKZhs7/l82lh75II3wDsQoCku6tOaoyf/U="
+
+ota:
+  - platform: esphome
+    password: "dc069ead6a1cfadd028cb54c7418c0a7"
+
 wifi:
-  ssid: "YOUR_SSID"
-  password: "YOUR_PASSWORD"
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "FanController"
-    password: "fallback_password"
+    ssid: "Fan-Victron-Orion-Dc-Charger"
+    password: "cVZ8rJwFDoWT"
 
 captive_portal:
-logger:
-api:
-ota:
 
 # DS18B20 Temperature Sensor
 dallas:
