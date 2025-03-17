@@ -1,0 +1,138 @@
+esphome:
+  name: victron_fan_controller
+  platform: ESP8266
+  board: d1_mini
+
+wifi:
+  ssid: "YOUR_SSID"
+  password: "YOUR_PASSWORD"
+  ap:
+    ssid: "FanController"
+    password: "fallback_password"
+
+captive_portal:
+logger:
+api:
+ota:
+
+# DS18B20 Temperature Sensor
+dallas:
+  - pin: D2  # GPIO4
+
+sensor:
+  - platform: dallas
+    address: 0x280417A4B5FF  # Replace with your sensor's address
+    name: "Victron Charger Temp"
+    id: charger_temp
+    update_interval: 10s  # Initial value; will be dynamically adjusted
+
+  - platform: dht
+    pin: D5  # GPIO14
+    model: DHT11
+    temperature:
+      name: "Ambient Temperature"
+      id: ambient_temp
+    humidity:
+      name: "Ambient Humidity"
+      id: ambient_humidity
+    update_interval: 10s  # Initial value; will be dynamically adjusted
+
+# Home Assistant Sensors for Model Selection and Parameters
+text_sensor:
+  - platform: homeassistant
+    name: "Update Interval Model"
+    entity_id: input_select.update_interval_model
+    id: update_interval_model
+
+sensor:
+  - platform: homeassistant
+    name: "Linear Model Slope"
+    entity_id: input_number.linear_slope
+    id: linear_slope
+  - platform: homeassistant
+    name: "Stepped Model Threshold"
+    entity_id: input_number.stepped_threshold
+    id: stepped_threshold
+  - platform: homeassistant
+    name: "Stepped High Interval"
+    entity_id: input_number.stepped_interval_high
+    id: stepped_interval_high
+  - platform: homeassistant
+    name: "Stepped Low Interval"
+    entity_id: input_number.stepped_interval_low
+    id: stepped_interval_low
+  - platform: homeassistant
+    name: "Logarithmic Model Base"
+    entity_id: input_number.logarithmic_base
+    id: logarithmic_base
+  - platform: homeassistant
+    name: "Exponential Model Base"
+    entity_id: input_number.exponential_base
+    id: exponential_base
+
+# PWM Control via MOSFET
+output:
+  - platform: esp8266_pwm
+    pin: D1  # GPIO5 (MOSFET Gate)
+    frequency: 1kHz
+    id: fan_pwm_output
+
+# Fan Speed Control
+fan:
+  - platform: speed
+    output: fan_pwm_output
+    name: "Cooling Fan"
+    id: cooling_fan
+
+    on_loop:
+      then:
+        - lambda: |-
+            float charger_temp = id(charger_temp).state;
+            float ambient_temp = id(ambient_temp).state;
+            float delta_temp = charger_temp - ambient_temp;
+            float interval = 10.0;  // Default update interval in seconds
+
+            // Retrieve selected model
+            std::string model = id(update_interval_model).state.c_str();
+
+            // Linear Model
+            if (model == "Linear") {
+              float slope = id(linear_slope).state;
+              interval = slope * delta_temp;
+            }
+            // Stepped Model
+            else if (model == "Stepped") {
+              float threshold = id(stepped_threshold).state;
+              float high_interval = id(stepped_interval_high).state;
+              float low_interval = id(stepped_interval_low).state;
+              interval = (delta_temp >= threshold) ? high_interval : low_interval;
+            }
+            // Logarithmic Model
+            else if (model == "Logarithmic") {
+              float base = id(logarithmic_base).state;
+              interval = log(delta_temp + 1) / log(base);
+            }
+            // Exponential Model
+            else if (model == "Exponential") {
+              float base = id(exponential_base).state;
+              interval = pow(base, delta_temp);
+            }
+
+            // Clamp interval to a reasonable range
+            interval = fmax(10, fmin(interval, 300));  // Between 10s and 5 minutes
+
+            // Update sensor update intervals
+            id(charger_temp).set_update_interval(interval * 1000);
+            id(ambient_temp).set_update_interval(interval * 1000);
+
+            // Calculate fan speed based on temperature difference
+            float threshold = id(fan_threshold).state;
+            float speed = 0.0;
+            if (charger_temp >= threshold) {
+              speed = (charger_temp - threshold) / 10.0;  // Scale speed from 0 to 1
+              if (speed > 1.0) speed = 1.0;
+            }
+            id(cooling_fan).set_speed(speed);
+            id(fan_speed_sensor).publish_state(speed * 100
+::contentReference[oaicite:0]{index=0}
+ 
