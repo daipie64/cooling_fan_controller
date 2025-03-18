@@ -1,3 +1,6 @@
+substitutions:
+  dallas_address: "0xd63ce10457487528"
+
 esphome:
   name: fan-victron-orion-dc-charger
   friendly_name: Cooling Fan for Victron Orion DC Charger
@@ -7,6 +10,13 @@ esp8266:
 
 # Enable logging
 logger:
+  level: DEBUG
+  # logs:
+  #   dallas.sensor: none
+  #   number: none
+  #   sensor: none
+  #   light: none
+  #   fan: none
 
 # Enable Home Assistant API
 api:
@@ -28,17 +38,33 @@ wifi:
 
 captive_portal:
 
+number:
+  # Slider to set Min Temperature to start fan
+  - platform: template
+    id: fan_threshold
+    name: Threshold Temperature
+    optimistic: True
+    min_value: 20
+    max_value: 60
+    initial_value: 25
+    step: 1
+    restore_value: true # Store setting between reboots
+
 # DS18B20 Temperature Sensor
-dallas:
-  - pin: D2  # GPIO4
+one_wire:
+  - platform: gpio
+    # pin: D6
+    pin: GPIO12
 
 sensor:
-  - platform: dallas
-    address: 0x280417A4B5FF  # Replace with your sensor's address
-    name: "Victron Charger Temp"
-    id: charger_temp
-    update_interval: 10s  # Initial value; will be dynamically adjusted
-
+  # Fan Speed Sensor (Reports % Speed to Home Assistant)
+  - platform: template
+    name: "Fan Speed"
+    id: fan_speed_sensor
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    
+  # DHT11 Ambient Temperature Sensor
   - platform: dht
     pin: D5  # GPIO14
     model: DHT11
@@ -48,104 +74,43 @@ sensor:
     humidity:
       name: "Ambient Humidity"
       id: ambient_humidity
-    update_interval: 10s  # Initial value; will be dynamically adjusted
+    update_interval: 5s
 
-# Home Assistant Sensors for Model Selection and Parameters
-text_sensor:
-  - platform: homeassistant
-    name: "Update Interval Model"
-    entity_id: input_select.update_interval_model
-    id: update_interval_model
+  # Dallas DS18B20 Victron Orion DC Charger Temperature Sensor
+  - platform: dallas_temp
+    address: $dallas_address
+    name: "Victron Charger Temp"
+    id: charger_temp
+    update_interval: 5s
 
-sensor:
-  - platform: homeassistant
-    name: "Linear Model Slope"
-    entity_id: input_number.linear_slope
-    id: linear_slope
-  - platform: homeassistant
-    name: "Stepped Model Threshold"
-    entity_id: input_number.stepped_threshold
-    id: stepped_threshold
-  - platform: homeassistant
-    name: "Stepped High Interval"
-    entity_id: input_number.stepped_interval_high
-    id: stepped_interval_high
-  - platform: homeassistant
-    name: "Stepped Low Interval"
-    entity_id: input_number.stepped_interval_low
-    id: stepped_interval_low
-  - platform: homeassistant
-    name: "Logarithmic Model Base"
-    entity_id: input_number.logarithmic_base
-    id: logarithmic_base
-  - platform: homeassistant
-    name: "Exponential Model Base"
-    entity_id: input_number.exponential_base
-    id: exponential_base
+    # Adjust fan speed(1-100%). Else, turn it off and set the speed to 1
+    on_value:
+      - lambda: !lambda |
+          float temp = id(charger_temp).state;
+          float threshold = id(fan_threshold).state;
+          float speed = 0.0;
+
+          if (temp >= threshold) {
+            speed = (temp - threshold) / 10.0;  // Scale speed from 0 to 1
+            if (speed > 1.0) speed = 1.0;
+          }
+
+          id(fan_pwm_output).set_level(speed);
+          id(fan_speed_sensor).publish_state(speed * 100.0);  // Convert to percentage and publish
 
 # PWM Control via MOSFET
 output:
   - platform: esp8266_pwm
-    pin: D1  # GPIO5 (MOSFET Gate)
-    frequency: 1kHz
+    pin: D7  # GPIO13 (MOSFET Gate)
+    frequency: 10kHz # 10kHz should be outside hearing range
     id: fan_pwm_output
 
-# Fan Speed Control
+# Fan Speed Automation (Dynamic Speed Based on Temperature)
 fan:
   - platform: speed
     output: fan_pwm_output
     name: "Cooling Fan"
     id: cooling_fan
 
-    on_loop:
-      then:
-        - lambda: |-
-            float charger_temp = id(charger_temp).state;
-            float ambient_temp = id(ambient_temp).state;
-            float delta_temp = charger_temp - ambient_temp;
-            float interval = 10.0;  // Default update interval in seconds
 
-            // Retrieve selected model
-            std::string model = id(update_interval_model).state.c_str();
 
-            // Linear Model
-            if (model == "Linear") {
-              float slope = id(linear_slope).state;
-              interval = slope * delta_temp;
-            }
-            // Stepped Model
-            else if (model == "Stepped") {
-              float threshold = id(stepped_threshold).state;
-              float high_interval = id(stepped_interval_high).state;
-              float low_interval = id(stepped_interval_low).state;
-              interval = (delta_temp >= threshold) ? high_interval : low_interval;
-            }
-            // Logarithmic Model
-            else if (model == "Logarithmic") {
-              float base = id(logarithmic_base).state;
-              interval = log(delta_temp + 1) / log(base);
-            }
-            // Exponential Model
-            else if (model == "Exponential") {
-              float base = id(exponential_base).state;
-              interval = pow(base, delta_temp);
-            }
-
-            // Clamp interval to a reasonable range
-            interval = fmax(10, fmin(interval, 300));  // Between 10s and 5 minutes
-
-            // Update sensor update intervals
-            id(charger_temp).set_update_interval(interval * 1000);
-            id(ambient_temp).set_update_interval(interval * 1000);
-
-            // Calculate fan speed based on temperature difference
-            float threshold = id(fan_threshold).state;
-            float speed = 0.0;
-            if (charger_temp >= threshold) {
-              speed = (charger_temp - threshold) / 10.0;  // Scale speed from 0 to 1
-              if (speed > 1.0) speed = 1.0;
-            }
-            id(cooling_fan).set_speed(speed);
-            id(fan_speed_sensor).publish_state(speed * 100
-::contentReference[oaicite:0]{index=0}
- 
