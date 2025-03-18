@@ -28,6 +28,7 @@ Based on the what I've discovered whilst prototyping:
   * 10kΩ Resistor – Pull-up resistor for the DS18B20.
 * DHT11
   * Measures ambient temperature and humidity.
+  * 10kΩ Resistor – Pull-up resistor for the DHT11.
 * IRLZ34N MOSFET
   * Logic level mosfet.
   * Switches the fan on and off.
