@@ -53,4 +53,7 @@ ChatGPT went on to suggest some other cool things:
 
 Here's the chat history for that [ChatGPT: add adaptive update algorithms plus some other cool things](https://chatgpt.com/g/g-HaRByhtTl-home-assistant-assistant/c/67d7064d-9ef4-8001-b204-753f9bf6a477)
 
+Quite a few things didn't work with the version of ESPHome that I was running - I guess the model was for an older version. Anyway, it gave ne some great ideas and the first version adapted the speed of the fans linearly ... I may go on to look at the other algorithms - we'll see :-)
+
+
 
