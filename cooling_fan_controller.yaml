@@ -10,13 +10,13 @@ esp8266:
 
 # Enable logging
 logger:
-  level: DEBUG
-  # logs:
-  #   dallas.sensor: none
-  #   number: none
-  #   sensor: none
-  #   light: none
-  #   fan: none
+  level: ERROR
+  logs:
+    dallas.sensor: none
+    number: none
+    sensor: none
+    light: none
+    fan: none
 
 # Enable Home Assistant API
 api:
@@ -50,11 +50,18 @@ number:
     step: 1
     restore_value: true # Store setting between reboots
 
+  # # Home Assistant Slider for Temperature Update Interval
+  # - platform: homeassistant
+  #   entity_id: input_number.temperature_update_interval
+  #   id: update_interval
+  #   internal: true  # Not exposed as a sensor in ESPHome
+
+
 # DS18B20 Temperature Sensor
 one_wire:
   - platform: gpio
-    # pin: D6
-    pin: GPIO12
+    # pin: D7
+    pin: GPIO13
 
 sensor:
   # Fan Speed Sensor (Reports % Speed to Home Assistant)
@@ -62,6 +69,13 @@ sensor:
     name: "Fan Speed"
     id: fan_speed_sensor
     unit_of_measurement: "%"
+    accuracy_decimals: 0
+    
+  # Update Interval (Reports interval to Home Assistant)
+  - platform: template
+    name: "Update Interval"
+    id: update_interval
+    unit_of_measurement: "s"
     accuracy_decimals: 0
     
   # DHT11 Ambient Temperature Sensor
@@ -97,12 +111,13 @@ sensor:
 
           id(fan_pwm_output).set_level(speed);
           id(fan_speed_sensor).publish_state(speed * 100.0);  // Convert to percentage and publish
+          id(charger_temp).set_update_interval(100000);
 
 # PWM Control via MOSFET
 output:
   - platform: esp8266_pwm
-    pin: D7  # GPIO13 (MOSFET Gate)
-    frequency: 10kHz # 10kHz should be outside hearing range
+    pin: D2  # GPIO4 (MOSFET Gate)
+    frequency: 20kHz # 20kHz should be outside hearing range
     id: fan_pwm_output
 
 # Fan Speed Automation (Dynamic Speed Based on Temperature)
