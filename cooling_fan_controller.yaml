@@ -1,5 +1,5 @@
 substitutions:
-  dallas_address: "0xd63ce10457487528"
+  dallas_address: "0xcd3c78e381676b28"
 
 esphome:
   name: fan-victron-orion-dc-charger
@@ -56,12 +56,26 @@ number:
   #   id: update_interval
   #   internal: true  # Not exposed as a sensor in ESPHome
 
+globals:
+  # track whether the fan was previously off, and give it a one-time kick when it starts
+  - id: fan_started
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+# update interval will be every 60 seconds whilst the fan is off,
+# 2 seconds whilst we are kick starting the fan
+# then 5 seconds whilst te fan is running
+  - id: last_interval
+    type: int
+    restore_value: no
+    initial_value: '60000'  # ms (60s)
 
 # DS18B20 Temperature Sensor
 one_wire:
   - platform: gpio
-    # pin: D7
-    pin: GPIO13
+    # pin: D3
+    pin: GPIO0
 
 sensor:
   # Fan Speed Sensor (Reports % Speed to Home Assistant)
@@ -80,7 +94,7 @@ sensor:
     
   # DHT11 Ambient Temperature Sensor
   - platform: dht
-    pin: D5  # GPIO14
+    pin: D4  # GPIO2
     model: DHT11
     temperature:
       name: "Ambient Temperature"
@@ -96,22 +110,36 @@ sensor:
     name: "Victron Charger Temp"
     id: charger_temp
     update_interval: 5s
+    setup_priority: -100
 
     # Adjust fan speed(1-100%). Else, turn it off and set the speed to 1
     on_value:
-      - lambda: !lambda |
+      - lambda: |-
           float temp = id(charger_temp).state;
           float threshold = id(fan_threshold).state;
           float speed = 0.0;
 
           if (temp >= threshold) {
-            speed = (temp - threshold) / 10.0;  // Scale speed from 0 to 1
+            if (!id(fan_started)) {
+              // Kickstart the fan with 100% power for 2 seconds
+              id(fan_pwm_output).set_level(1.0);
+              id(fan_speed_sensor).publish_state(100.0);
+              id(fan_started) = true;
+              delay(2000);  // Wait 2 seconds before continuing
+            }
+
+            // Scale speed from 20% at threshold to 100% at 40°C
+            float slope = (1.0 - 0.2) / (40.0 - threshold);
+            speed = 0.2 + slope * (temp - threshold);
             if (speed > 1.0) speed = 1.0;
+          } else {
+            id(fan_started) = false;  // Reset flag when temp falls below threshold
           }
 
           id(fan_pwm_output).set_level(speed);
-          id(fan_speed_sensor).publish_state(speed * 100.0);  // Convert to percentage and publish
+          id(fan_speed_sensor).publish_state(speed * 100.0);
           id(charger_temp).set_update_interval(100000);
+
 
 # PWM Control via MOSFET
 output:
