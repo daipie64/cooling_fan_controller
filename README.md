@@ -55,5 +55,11 @@ Here's the chat history for that [ChatGPT: add adaptive update algorithms plus s
 
 Quite a few things didn't work with the version of ESPHome that I was running - I guess the model was for an older version. Anyway, it gave ne some great ideas and the first version adapted the speed of the fans linearly ... I may go on to look at the other algorithms - we'll see :-)
 
+## Runtime Current Draw
+I measured the following current draw.
+
+With fans at idle the current draw was 0.03A.
+With fans at full spped the current draw was 0.35A.
+
 
 
