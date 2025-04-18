@@ -58,8 +58,9 @@ Quite a few things didn't work with the version of ESPHome that I was running - 
 ## Runtime Current Draw
 I measured the following current draw.
 
-With fans at idle the current draw was 0.03A.
-With fans at full spped the current draw was 0.35A.
+With fans at idle the current draw was 0.03A, 0.36W.
+
+With fans at full spped the current draw was 0.35A, 4.2W.
 
 
 
